@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Robot de Trading - RSI</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial; max-width: 600px; margin: auto; padding: 20px; }
+    input, button { padding: 8px; margin-top: 10px; width: 100%; }
+    #signal { font-size: 1.2em; margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <h1>Robot de Trading - RSI (via Finnhub)</h1>
+  <input type="text" id="symbol" placeholder="Ex: AAPL, TSLA, MSFT" />
+  <button onclick="getRSI()">Analyser</button>
+  <div id="signal"></div>
+  <canvas id="chart" height="100"></canvas>
+
+  <script>
+    const apiKey = "TON_API_KEY_ICI";  // d0kbr81r01qn937jsdb0d0kbr81r01qn937jsdbg
+
+    async function getRSI() {
+      const symbol = document.getElementById("symbol").value.toUpperCase();
+      if (!symbol) return;
+
+      const url = `https://finnhub.io/api/v1/indicator?symbol=${symbol}&resolution=D&from=${getStartTimestamp()}&to=${getNowTimestamp()}&indicator=rsi&timeperiod=14&token=${apiKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!data.rsi || data.rsi.length === 0) {
+        document.getElementById("signal").innerText = ⚠️ Données indisponibles pour ce symbole.";
+        return;
+      }
+
+      const rsi = data.rsi;
+      const dernierRSI = rsi[rsi.length - 1];
+
+      let signal = "😐 Attente";
+      if (dernierRSI < 30) signal = "🟢 Acheter (RSI < 30)";
+      else if (dernierRSI > 70) signal = "🔴 Vendre (RSI > 70)";
+
+      document.getElementById("signal").innerText = `RSI actuel : ${dernierRSI.toFixed(2)} → ${signal}`;
+
+      new Chart(document.getElementById("chart"), {
+        type: "line",
+        data: {
+          labels: Array.from({ length: rsi.length }, (_, i) => i),
+          datasets: [{
+            label: "RSI",
+            data: rsi,
+            borderColor: "blue",
+            fill: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { min: 0, max: 100 }
+          }
+        }
+      });
+    }
+
+    function getNowTimestamp() {
+      return Math.floor(Date.now() / 1000);
+    }
+
+    function getStartTimestamp() {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 6);  // 6 mois en arrière
+      return Math.floor(d.getTime() / 1000);
+    }
+  </script>
+</body>
+</html>
